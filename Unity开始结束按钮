@@ -1,0 +1,23 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class Button : MonoBehaviour
+{
+    //开始游戏
+   public void StartGame()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(1);//这里的1可以改为游戏第一个场景的名称，注意，名称是字符串，需要添加双引号
+    }
+
+    // 结束游戏
+    public void ExitGame()
+    {
+     #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+     #else
+     Application.Quit;
+     #endif
+    }
+}
