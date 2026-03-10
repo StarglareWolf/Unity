@@ -1,0 +1,23 @@
+首先新建一个Canvas，并创建一个按钮，默认为白底矩形
+然后在Inspector界面将image组件的source image改为None,并且在下方Color中设置，将几种颜色系数全部改为0，这样按钮就变得透明了
+然后生成一张透明背景的图形图片，将其拖拽至source image便可完成按钮的形状创建
+注意：这个时候按钮的范围还是那个矩形，不是你的目前可视的按钮的范围大小，需要通过代码修改
+代码思路：阿尔法函数判定，是对Image组建的拓展，所以需要将“仓库”更改为Image,并且代码最上方using Unity.UI;
+代码呈现：
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Unity.UI;
+using UnityEngine.UI;
+
+public class imageshape : Image
+{
+    // Start is called before the first frame update
+    protected override void Awake()
+    {
+        base.Awake();
+        alphaHitTestMinimumThreshold = 0.1f;
+    }
+}
+这串代码能够实现范围的自测，使得范围更精细。不过貌似会增加文件大小。
+在使用前需要将按钮原来的image组件删除，然后将该代码文件拖拽到按钮中，然后按照上述方法将按钮透明化，并插入自己希望的图形图片即可
