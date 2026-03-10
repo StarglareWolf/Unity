@@ -1,0 +1,6 @@
+很简单，真的很简单！
+创建按钮后在Button组件中的Transition中选择ColorTint,然后在下方Highlighted Color选择自己想要的颜色，这样就能实现鼠标靠近颜色改变了。
+Normal Color表示按钮不受干扰时的颜色
+Pressed Color表示鼠标按下按钮时按钮显示的颜色
+至于Selected Color和Disabled Color,我暂时不清楚
+不过以上功能试试就能很轻松地了解了！！！
