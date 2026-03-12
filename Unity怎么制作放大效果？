@@ -1,0 +1,181 @@
+分类1：真正的放大功能
+方案：用Shader实现真正放大（手把手教你）
+第一步：Project窗口创建Shader->Unlit Shader,改名为RealMagnifyShader
+写入代码：
+Shader "Unlit/RealMagnifyShader"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _MagnifyCenter ("Magnify Center", Vector) = (0.5, 0.5, 0, 0)
+        _MagnifyRadius ("Magnify Radius", Range(0, 0.5)) = 0.2
+        _MagnifyPower ("Magnify Power", Range(1, 5)) = 2.0
+    }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" "Queue"="Transparent" }
+        LOD 100
+        Blend SrcAlpha OneMinusSrcAlpha
+        ZWrite Off
+
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct v2f
+            {
+                float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
+            };
+
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            float2 _MagnifyCenter;
+            float _MagnifyRadius;
+            float _MagnifyPower;
+
+            v2f vert (appdata v)
+            {
+                v2f o;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+                // 计算当前UV到放大中心的距离
+                float2 distVec = i.uv - _MagnifyCenter;
+                float dist = length(distVec);
+                
+                // 如果在放大范围内
+                if (dist < _MagnifyRadius)
+                {
+                    // 真正的放大算法：距离中心越近，采样点越靠近中心
+                    // 这样图片内容会被“撑开”
+                    float zoomFactor = 1.0 + (_MagnifyPower - 1.0) * (1.0 - dist / _MagnifyRadius);
+                    float2 magnifiedUV = _MagnifyCenter + distVec / zoomFactor;
+                    
+                    // 采样放大后的UV
+                    return tex2D(_MainTex, magnifiedUV);
+                }
+                else
+                {
+                    // 范围外正常显示
+                    return tex2D(_MainTex, i.uv);
+                }
+            }
+            ENDCG
+        }
+    }
+}
+
+
+第二步：Project窗口创建Material,改名RealMagnifyMaterial,并在其Inspector中将最上方的Shader选项改为Unlit/RealMagnifyShader,将背景图片拖进下方Texture框内
+第三步：Hierarchy内创建UI/Raw Image,改名Background,并在Inspector中设置位置为填满（填满背景），并在下方Material框拖入RealMagnifyMaterial,且Texture框为空
+第四步：写控制脚本
+脚本如下：RealMagnifyController
+using UnityEngine;
+using UnityEngine.UI;
+
+public class RealMagnifyController : MonoBehaviour
+{
+    public RawImage background;      // 背景图片
+    public Material magnifyMaterial;  // 放大材质
+    public float magnifyRadius = 0.2f;    // 放大区域半径
+    public float magnifyPower = 2f;       // 放大倍数
+
+    void Start()
+    {
+        if (magnifyMaterial == null && background != null)
+        {
+            magnifyMaterial = background.material;
+        }
+    }
+
+    void Update()
+    {
+        if (magnifyMaterial == null || background == null) return;
+
+        // 获取鼠标在屏幕上的位置 (0-1范围)
+        Vector2 uv = new Vector2(
+            Input.mousePosition.x / Screen.width,
+            Input.mousePosition.y / Screen.height
+        );
+
+        // 传递给Shader
+        magnifyMaterial.SetVector("_MagnifyCenter", uv);
+        magnifyMaterial.SetFloat("_MagnifyRadius", magnifyRadius);
+        magnifyMaterial.SetFloat("_MagnifyPower", magnifyPower);
+    }
+}
+
+第五步：将该脚本挂载到Background，然后在Inspector中将Background拖进去，
+        Magnify Material一栏拖入RealMagnifyMaterial,
+Magnify Radius表示放大区域大小，Magnify Power表示放大倍数，自己可以手动调，这样就可以成功了。
+
+
+
+
+
+
+分类2：“虚假”的放大（背景只显示鼠标周围的那一块，所以视觉上就是放大了）
+方案：使用Unity内置的Shader实现放大效果
+第一步：Project创建Material,改名为MagnifyMaterial,在Inspector上方的Shader选择UI/Default,并将背景图片拖进Texture框，如果拖不进去可以先选择Unlit/Default，后面再改回来
+第二步：创建背景：Hierarchy创建UI/Raw Image,改名为Background,Material栏拖入MagnifyMaterial
+第三步：放大脚本：SimpleMagnify
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class SimpleMagnify : MonoBehaviour
+{
+    // Start is called before the first frame update
+    public RawImage backgroundImage;
+    public float magnifySize = 0.2f;
+    public float magnifyPower = 2f;
+
+    private Material mat;
+    void Start()
+    {
+
+        mat = backgroundImage.material;
+
+        if(mat==null)
+        {
+            mat = new Material(Shader.Find("UI/Default"));
+            backgroundImage.material = mat;
+        }
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (mat == null) return;
+
+        Vector2 uv = new Vector2(
+            Input.mousePosition.x / Screen.width,
+            Input.mousePosition.y / Screen.height);
+
+        Rect uvRect = new Rect(
+            uv.x - magnifySize / 2,
+            uv.y - magnifySize / 2,
+            magnifySize,
+            magnifySize);
+
+
+        backgroundImage.uvRect = uvRect;
+    }
+}
+第四步：挂载脚本至Background,并将Background拖进Background Image栏，然后运行即可
+参数：magnifySize:越小放大倍数越大，magnifyPower没有用到，可忽略。
